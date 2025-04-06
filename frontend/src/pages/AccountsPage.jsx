@@ -326,7 +326,7 @@ function AccountsPage() {
             {!loadingAccounts && !error && (
                 <div className="space-y-4">
                     {accounts.length === 0 ? ( // <<< Use context 'accounts'
-                        <div className="text-center py-10 bg-white dark:bg-gray-800 shadow rounded-lg">...</div> // Empty State
+                        <div className="text-center py-10 bg-white dark:bg-gray-800 shadow rounded-lg">There are currently no accounts found in this user space, kindly create one.</div> // Empty State
                     ) : (
                         accounts.map(account => ( // <<< Use context 'accounts'
                             <div
