@@ -8,8 +8,9 @@ const authRoutes = require('./routes/authRoutes');
 const accountRoutes = require('./routes/accountRoutes');
 const transactionRoutes = require('./routes/transactionRoutes');
 const userRoutes = require('./routes/userRoutes'); 
-const exportRoutes = require('./routes/exportRoutes'); 
-// Import other routes (categories, budgets, etc.) later
+const categoryRoutes = require('./routes/categoryRoutes');
+const importRoutes = require('./routes/importRoutes'); 
+const exportRoutes = require('./routes/exportRoutes');
 
 const app = express();
 
@@ -17,7 +18,6 @@ const app = express();
 app.use(cors()); // Allow requests from your frontend origin
 app.use(express.json()); // Parse JSON bodies
 app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
-const categoryRoutes = require('./routes/categoryRoutes');
 
 // Basic Route
 app.get('/', (req, res) => {
@@ -31,6 +31,7 @@ app.use('/api/transactions', transactionRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/users', userRoutes);      
 app.use('/api/export', exportRoutes);
+app.use('/api/import', importRoutes);
 
 // Global Error Handler (Basic Example - Expand Later)
 app.use((err, req, res, next) => {
@@ -45,7 +46,7 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 5000;
 
 // Start Server
-// Check DB connection before starting (optional but good practice)
+// Check DB connection before starting (good practice)
 db.query('SELECT NOW()', (err, res) => {
     if (err) {
         console.error('Database connection error:', err);

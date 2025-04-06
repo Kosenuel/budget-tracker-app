@@ -2,6 +2,7 @@
 import React from 'react';
 import { Tab } from '@headlessui/react';
 import { UserCircleIcon, Cog8ToothIcon, ListBulletIcon, CircleStackIcon, InformationCircleIcon } from '@heroicons/react/24/outline';
+import { useAccountScope } from '../contexts/AccountScopeContext';
 
 // Import the new section components (we will create these next)
 import ProfileSettings from '../components/settings/ProfileSettings';
@@ -15,11 +16,13 @@ function classNames(...classes) {
 }
 
 function SettingsPage() {
+  const { refreshAccounts } = useAccountScope();
+
   const tabs = [
     { name: 'Profile', icon: UserCircleIcon, component: ProfileSettings },
     { name: 'Preferences', icon: Cog8ToothIcon, component: PreferencesSettings },
     { name: 'Categories', icon: ListBulletIcon, component: CategorySettings },
-    { name: 'Data', icon: CircleStackIcon, component: DataSettings },
+    { name: 'Data', icon: CircleStackIcon, component: () => <DataSettings refreshAccounts={refreshAccounts} /> },
     { name: 'About', icon: InformationCircleIcon, component: AboutSettings },
   ];
 

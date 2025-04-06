@@ -69,6 +69,16 @@ const deleteAccount = async (id, user_id) => {
      return rowCount > 0; // Return true if deletion happened
  };
 
+ // src/models/Account.js
+const findAccountByNameAndUser = async (name, userId) => {
+    const { rows } = await db.query(
+        'SELECT id, currency FROM accounts WHERE name ILIKE $1 AND user_id = $2', // Case-insensitive search
+        [name, userId]
+    );
+    // Consider what to do if multiple accounts have the same name (maybe return error or first one?)
+    return rows[0];
+};
+
 
 module.exports = {
     createAccount,
@@ -76,5 +86,6 @@ module.exports = {
     getAccountById,
     updateAccount,
     deleteAccount,
+    findAccountByNameAndUser,
     // calculateBalance // Export if needed elsewhere
 };

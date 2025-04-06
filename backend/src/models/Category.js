@@ -114,11 +114,27 @@ const deleteCategory = async (id, user_id) => {
      return { success: true, status: 200, message: 'Category deleted successfully.' }; // Or use 204 No Content status
 };
 
+// src/models/Category.js
+const findCategoryByNameAndUserOrDefaults = async (name, userId, type) => {
+    // Look for user's category first, then default, matching type
+    const { rows } = await db.query(
+        `SELECT id FROM categories
+         WHERE name ILIKE $1 AND type = $3 AND (user_id = $2 OR is_default = TRUE)
+         ORDER BY is_default ASC -- Prioritize user's category if names clash
+         LIMIT 1`, // Case-insensitive search
+        [name, userId, type] // Ensure type ('income'/'expense') matches
+    );
+   return rows[0];
+};
+
+
 module.exports = {
     getDefaultAndUserCategories,
     createCategory,
     updateCategory,
     deleteCategory,
-     findCategoryById // Export if needed by controller
+    findCategoryById,
+    findCategoryByNameAndUserOrDefaults, 
+     // Export if needed by controller
     // isCategoryInUse // Not typically needed outside the delete function
 };
