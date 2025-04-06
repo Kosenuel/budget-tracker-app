@@ -7,6 +7,8 @@ const db = require('./config/db'); // Ensure DB connection pool is initialized
 const authRoutes = require('./routes/authRoutes');
 const accountRoutes = require('./routes/accountRoutes');
 const transactionRoutes = require('./routes/transactionRoutes');
+const userRoutes = require('./routes/userRoutes'); 
+const exportRoutes = require('./routes/exportRoutes'); 
 // Import other routes (categories, budgets, etc.) later
 
 const app = express();
@@ -27,7 +29,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/accounts', accountRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/categories', categoryRoutes);
-// Use other routes later...
+app.use('/api/users', userRoutes);      
+app.use('/api/export', exportRoutes);
 
 // Global Error Handler (Basic Example - Expand Later)
 app.use((err, req, res, next) => {

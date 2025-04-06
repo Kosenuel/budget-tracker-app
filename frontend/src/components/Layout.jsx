@@ -38,7 +38,7 @@ function Layout() {
                 <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between items-center h-16">
                          {/* Logo/Brand */}
-                        <Link to="/" className="text-xl font-bold flex items-center space-x-2 text-white hover:opacity-80 transition-opacity duration-150"><span>BudgetApp</span></Link>
+                        <Link to="/" className="text-xl font-bold flex items-center space-x-2 text-white hover:opacity-80 transition-opacity duration-150"><span>Kosenuel BudgetApp</span></Link>
 
                         {/* --- Center Section: Account Scope Switcher (if authenticated) --- */}
                         <div className="flex-1 flex justify-center px-4">
@@ -166,7 +166,7 @@ function Layout() {
 
             <main className="flex-grow w-full"><Outlet /></main>
 
-            <footer className="w-full text-center py-4 bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-sm mt-auto"> © {currentYear} Budget Tracker App </footer>
+            <footer className="w-full text-center py-4 bg-gray-200 dark:bg-gray-800 text-gray-600 dark:text-gray-400 text-sm mt-auto"> © {currentYear} Kosenuel Budget Tracker App </footer>
          </div>
     );
 }
