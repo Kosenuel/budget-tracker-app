@@ -4,7 +4,22 @@ import { Link } from 'react-router-dom';
 import axiosInstance from '../../api/axiosInstance';
 import { useAuth } from '../../hooks/useAuth';
 import { toast } from 'react-toastify';
-import { ArrowDownTrayIcon, CreditCardIcon, ExclamationTriangleIcon, ArrowUpTrayIcon } from '@heroicons/react/24/outline';
+import { ArrowDownTrayIcon, CreditCardIcon, ExclamationTriangleIcon, ArrowUpTrayIcon, CheckCircleIcon, InformationCircleIcon, XCircleIcon } from '@heroicons/react/24/outline';
+
+// Function to determine icon and styles based on status type
+const getStatusStyles = (type) => {
+    switch (type) {
+        case 'success':
+            return { icon: CheckCircleIcon, bg: 'bg-green-50 dark:bg-green-900/20', text: 'text-green-700 dark:text-green-300', ring: 'ring-green-400/30', iconColor: 'text-green-500' };
+        case 'warn': // Use 'warn' if there are errors but some success
+             return { icon: ExclamationTriangleIcon, bg: 'bg-yellow-50 dark:bg-yellow-900/20', text: 'text-yellow-700 dark:text-yellow-300', ring: 'ring-yellow-400/30', iconColor: 'text-yellow-500' };
+        case 'error':
+            return { icon: XCircleIcon, bg: 'bg-red-50 dark:bg-red-900/20', text: 'text-red-700 dark:text-red-300', ring: 'ring-red-400/30', iconColor: 'text-red-500' };
+        case 'info':
+        default:
+            return { icon: InformationCircleIcon, bg: 'bg-blue-50 dark:bg-blue-900/20', text: 'text-blue-700 dark:text-blue-300', ring: 'ring-blue-400/30', iconColor: 'text-blue-500' };
+    }
+};
 
 function DataSettings({ refreshAccounts }) {
     const { logout } = useAuth();
@@ -17,10 +32,11 @@ function DataSettings({ refreshAccounts }) {
     // --- State for Import ---
     const [selectedFile, setSelectedFile] = useState(null);
     const [importing, setImporting] = useState(false);
-    const [importStatus, setImportStatus] = useState({ message: '', type: '', errors: [] }); // type: 'success' or 'error'
+    // Status: { message: string, type: 'info'|'success'|'warn'|'error', errors: Array<{row: number|string, errors: string[]}> }
+    const [importStatus, setImportStatus] = useState({ message: '', type: '', errors: [] });
     const fileInputRef = useRef(null); // Ref to clear file input
 
-    // --- NEW State for Account Import ---
+    // --- State for Account Import ---
     const [selectedAccountFile, setSelectedAccountFile] = useState(null);
     const [accountImporting, setAccountImporting] = useState(false);
     const [accountImportStatus, setAccountImportStatus] = useState({ message: '', type: '', errors: [] });
@@ -85,14 +101,28 @@ function DataSettings({ refreshAccounts }) {
      };
 
      // --- Import Handlers ---
+    // const handleFileChange = (event) => {
+    //     const file = event.target.files[0];
+    //     if (file && file.type === 'text/csv') {
+    //         setSelectedFile(file);
+    //         setImportStatus({ message: '', type: '', errors: [] }); // Clear previous status
+    //     } else {
+    //         setSelectedFile(null);
+    //         toast.error("Please select a valid CSV file.");
+    //     }
+    // };
+
     const handleFileChange = (event) => {
         const file = event.target.files[0];
+        // >>> CLEAR previous status when a NEW file is selected <<<
+        setImportStatus({ message: '', type: '', errors: [] });
         if (file && file.type === 'text/csv') {
             setSelectedFile(file);
-            setImportStatus({ message: '', type: '', errors: [] }); // Clear previous status
         } else {
             setSelectedFile(null);
-            toast.error("Please select a valid CSV file.");
+            if(file) { // Only toast if a file was actually selected but was wrong type
+               toast.error("Please select a valid CSV file.");
+            }
         }
     };
 
@@ -116,31 +146,34 @@ function DataSettings({ refreshAccounts }) {
             });
 
             const { message, imported, failed, errors } = response.data;
-            setImportStatus({ message: message || 'Import finished.', type: 'success', errors: errors || [] });
-            toast.success(`Imported ${imported} transactions.`);
-            if (failed > 0) {
-                 toast.warn(`Failed to import ${failed} transactions. See details below.`);
-             }
-             // Optionally trigger a refresh of transactions on the TransactionsPage if user navigates there
-             // <<< 2. Call refreshAccounts prop on success >>>
-            if (imported > 0 && typeof refreshAccounts === 'function') {
-                console.log("Refreshing account list after import...");
-                refreshAccounts();
-            } else if (typeof refreshAccounts !== 'function') {
-                console.warn("refreshAccounts function was not passed correctly to DataSettings.");
-                // Fallback or alternative method might be needed if prop drilling fails
-            }
+
+            console.log("Transaction Import Response Data:", response.data); // Log response for troubleshooting.
+
+            // Determine status type based on results
+            let statusType = 'info';
+            if (imported > 0 && failed === 0) statusType = 'success';
+            else if (imported > 0 && failed > 0) statusType = 'warn'; // <<< Use 'warn' if partial success
+            else if (imported === 0 && failed > 0) statusType = 'error'; // All failed
+
+            // Set the FINAL status for this import run
+            setImportStatus({ message: message || 'Import finished.', type: statusType, errors: errors || [] });
+
+            if(imported > 0) toast.success(`Imported ${imported} transactions.`);
+            if(failed > 0) toast.warn(`Failed to import ${failed} transactions. See status below.`);
 
         } catch (error) {
-            console.error("Error importing transactions:", error);
+            console.error("Error importing transactions (catch block):", error);
             const errorMsg = error.response?.data?.message || "An error occurred during import.";
-            setImportStatus({ message: errorMsg, type: 'error', errors: error.response?.data?.errors || [] });
+            const responseErrors = error.response?.data?.errors;
+            // Set FINAL error status for this import run
+            setImportStatus({ message: errorMsg, type: 'error', errors: responseErrors || [] });
             toast.error(errorMsg);
         } finally {
             setImporting(false);
-            setSelectedFile(null); // Clear selection after attempt
+            // Clear file selection visually, but DO NOT clear importStatus here
+            setSelectedFile(null);
             if (fileInputRef.current) {
-                fileInputRef.current.value = ''; // Reset file input visually
+                fileInputRef.current.value = '';
             }
         }
     };
@@ -174,22 +207,16 @@ function DataSettings({ refreshAccounts }) {
                 headers: { 'Content-Type': 'multipart/form-data' },
             });
 
-            const { message, imported, failed, errors } = response.data;
-            setAccountImportStatus({ message: message || 'Account import finished.', type: 'success', errors: errors || [] });
-            toast.success(`Imported ${imported} accounts.`);
-            if (failed > 0) {
-                toast.warn(`Failed to import ${failed} accounts. See details below.`);
-            }
-             // !!! IMPORTANT: Refresh accounts in the global scope after successful import !!!
-            // Needs access to refreshAccounts from useAccountScope if available here
-            // <<< 2. Call refreshAccounts prop on success >>>
-            if (imported > 0 && typeof refreshAccounts === 'function') {
-                console.log("Refreshing account list after import...");
-                refreshAccounts();
-            } else if (typeof refreshAccounts !== 'function') {
-                console.warn("refreshAccounts function was not passed correctly to DataSettings.");
-                // Fallback or alternative method might be needed if prop drilling fails
-            }
+             const { message, imported, failed, errors } = response.data;
+             let statusType = 'info';
+             if (imported > 0 && failed === 0) statusType = 'success';
+             else if (imported > 0 && failed > 0) statusType = 'warn';
+             else if (imported === 0 && failed > 0) statusType = 'error';
+
+             setAccountImportStatus({ message: message || 'Account import finished.', type: statusType, errors: errors || [] });
+            if(imported > 0) toast.success(`Imported ${imported} accounts.`);
+             if(failed > 0) toast.warn(`Failed to import ${failed} accounts. See details below.`);
+            if (imported > 0 && typeof refreshAccounts === 'function') { refreshAccounts(); }
 
         } catch (error) {
             console.error("Error importing accounts:", error);
@@ -255,18 +282,35 @@ function DataSettings({ refreshAccounts }) {
                         </div>
                         {/* Transaction Import UI and Status Display */}
                         {importStatus.message && (
-                            <div className={`mt-4 p-3 rounded-md text-sm ${importStatus.type === 'success' ? 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 ring-1 ring-green-400/30' : importStatus.type === 'error' ? 'bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 ring-1 ring-red-400/30' : 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 ring-1 ring-blue-400/30'}`}>
-                                <p className="font-medium">{importStatus.message}</p>
-                                {importStatus.errors && importStatus.errors.length > 0 && (
-                                    <ul className="mt-2 list-disc list-inside space-y-1 text-xs">
-                                        {importStatus.errors.slice(0, 10).map((err, index) => ( // Limit displayed errors
-                                            <li key={index}>Row {err.row}: {err.errors.join(', ')}</li>
-                                        ))}
-                                        {importStatus.errors.length > 10 && <li>... and {importStatus.errors.length - 10} more errors.</li>}
+                            <div className={`mt-4 p-4 rounded-md text-sm ${getStatusStyles(importStatus.type).bg} ${getStatusStyles(importStatus.type).ring} ring-1 ring-inset`}>
+                                <div className="flex">
+                                    <div className="flex-shrink-0">
+                                        {React.createElement(getStatusStyles(importStatus.type).icon, { className: `h-5 w-5 ${getStatusStyles(importStatus.type).iconColor}`, 'aria-hidden': 'true' })}
+                                    </div>
+                                    <div className="ml-3 flex-1 md:flex md:justify-between">
+                                        <p className={`font-medium ${getStatusStyles(importStatus.type).text}`}>{importStatus.message}</p>
+                                        {/* Optional: Add close button for status message? */}
+                                    </div>
+                                </div>
+                            {/* --- Render detailed errors - TEMPORARILY REMOVE LENGTH CHECK --- */}
+                            {importStatus.errors  && importStatus.errors.length > 0  && (
+                                <div className={`mt-3 pl-8 ...`}> {/* Indent */}
+                                    <h4 className="text-xs font-semibold mb-1">Error Details:</h4>
+                                    <ul className="list-disc list-outside space-y-1 text-xs max-h-40 overflow-y-auto">
+                                        {/* Add a check for array type before mapping */}
+                                        {Array.isArray(importStatus.errors) ? importStatus.errors.slice(0, 50).map((errObject, index) => (
+                                            <li key={index}>
+                                                <span className="font-semibold">Row {errObject?.row ?? 'N/A'}:</span> {/* Optional chaining */}
+                                                {Array.isArray(errObject?.errors) ? errObject.errors.join(', ') : String(errObject?.errors ?? 'Unknown error')} {/* Optional chaining & String cast */}
+                                            </li>
+                                        )) : <li>Error data is not an array.</li>}
+                                        {Array.isArray(importStatus.errors) && importStatus.errors.length > 50 && <li>... and {importStatus.errors.length - 50} more errors.</li>}
                                     </ul>
-                                )}
-                            </div>
+                                </div>
+                            )}
+                         </div>
                         )}
+                        
                     </div>
                     {/* --- Account Import Section --- */}
                     <div className="mt-6 pt-6 border-t dark:border-gray-700">
@@ -294,15 +338,40 @@ function DataSettings({ refreshAccounts }) {
                         </div>
                         {/* Account Import Status Display */}
                         {accountImportStatus.message && (
-                            <div className={`mt-4 p-3 rounded-md text-sm ${accountImportStatus.type === 'success' ? '...' : accountImportStatus.type === 'error' ? '...' : '...'}`}> {/* Status styles */}
-                                <p className="font-medium">{accountImportStatus.message}</p>
-                                {accountImportStatus.errors && accountImportStatus.errors.length > 0 && (
-                                    <ul className="mt-2 list-disc list-inside space-y-1 text-xs">
-                                        {accountImportStatus.errors.slice(0, 10).map((err, index) => ( <li key={index}>Row {err.row}: {err.errors.join(', ')}</li> ))}
-                                        {accountImportStatus.errors.length > 10 && <li>... and {accountImportStatus.errors.length - 10} more errors.</li>}
-                                    </ul>
-                                )}
-                            </div>
+                            // <div className={`mt-4 p-3 rounded-md text-sm ${accountImportStatus.type === 'success' ? '...' : accountImportStatus.type === 'error' ? '...' : '...'}`}> {/* Status styles */}
+                            //     <p className="font-medium">{accountImportStatus.message}</p>
+                            //     {accountImportStatus.errors && accountImportStatus.errors.length > 0 && (
+                            //         <ul className="mt-2 list-disc list-inside space-y-1 text-xs">
+                            //             {accountImportStatus.errors.slice(0, 10).map((err, index) => ( <li key={index}>Row {err.row}: {err.errors.join(', ')}</li> ))}
+                            //             {accountImportStatus.errors.length > 10 && <li>... and {accountImportStatus.errors.length - 10} more errors.</li>}
+                            //         </ul>
+                            //     )}
+                            // </div>
+
+                            <div className={`mt-4 p-4 rounded-md text-sm ${getStatusStyles(accountImportStatus.type).bg} ${getStatusStyles(accountImportStatus.type).ring} ring-1 ring-inset`}>
+                            <div className="flex">
+                                 <div className="flex-shrink-0">
+                                     {React.createElement(getStatusStyles(accountImportStatus.type).icon, { className: `h-5 w-5 ${getStatusStyles(accountImportStatus.type).iconColor}`, 'aria-hidden': 'true' })}
+                                </div>
+                                <div className="ml-3 flex-1 md:flex md:justify-between">
+                                     <p className={`font-medium ${getStatusStyles(accountImportStatus.type).text}`}>{accountImportStatus.message}</p>
+                                 </div>
+                             </div>
+                             {/* <<< Render detailed errors if they exist >>> */}
+                             {accountImportStatus.errors && accountImportStatus.errors.length > 0 && (
+                                <div className={`mt-3 pl-8 ${getStatusStyles(accountImportStatus.type).text}`}>
+                                     <h4 className="text-xs font-semibold mb-1">Error Details:</h4>
+                                     <ul className="list-disc list-outside space-y-1 text-xs max-h-40 overflow-y-auto">
+                                         {accountImportStatus.errors.slice(0, 50).map((err, index) => (
+                                             <li key={index}>
+                                                 <span className="font-semibold">Row {err.row}:</span> {err.errors.join(', ')}
+                                            </li>
+                                        ))}
+                                         {accountImportStatus.errors.length > 50 && <li>... and {accountImportStatus.errors.length - 50} more errors.</li>}
+                                     </ul>
+                                 </div>
+                             )}
+                        </div>
                         )}
                     </div>
                  </div>
