@@ -1,6 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { ExclamationCircleIcon } from '@heroicons/react/20/solid';
 import { useAccountScope } from '../contexts/AccountScopeContext'; // <<< Import scope
+// --- Date Picker Imports ---
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css'; // Default styles
+import { parseISO, format as formatDateFns, isValid as isValidDate } from 'date-fns'; // date-fns utilities
+import { createPortal } from 'react-dom';
+
+// --- End Date Picker Imports ---
 
 function TransactionForm({
     initialData,
@@ -75,6 +82,32 @@ function TransactionForm({
     }, [formData.type, filteredCategories]); // Removed formData.category_id to prevent potential loop
 
 
+    //   // --- Update useEffect for Initial Data ---
+    //   useEffect(() => {
+    //     let initialDate = new Date(); // Default to today
+    //     if (initialData?.transaction_date) {
+    //         // Try parsing the incoming date string (YYYY-MM-DD or ISO)
+    //         const parsedDate = parseISO(initialData.transaction_date); // Handles YYYY-MM-DD and ISO fine
+    //         if (isValidDate(parsedDate)) {
+    //             initialDate = parsedDate;
+    //         } else {
+    //             console.warn(`Could not parse initial date: ${initialData.transaction_date}`);
+    //             // Keep default 'today' if parsing fails
+    //         }
+    //     }
+
+    //     setFormData({
+    //         type: initialData?.type || 'expense',
+    //         amount: initialData?.amount != null ? parseFloat(initialData.amount).toFixed(2) : '',
+    //         transaction_date: initialDate, // <<< Store as Date object
+    //         category_id: initialData?.category_id || '',
+    //         description: initialData?.description || '',
+    //     });
+
+    //     setLocalError('');
+    // }, [initialData, selectedAccountId]); // Rerun if initialData or scope changes
+    // --- End Update useEffect ---
+
     // Handle input changes
     const handleChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -84,6 +117,16 @@ function TransactionForm({
         }));
          setLocalError(''); // Clear local error on change
     };
+
+    // --- Specific Handler for DatePicker ---
+    const handleDateChange = (date) => { // Receives a Date object or null
+        setFormData(prevData => ({
+                ...prevData,
+                transaction_date: date // Store the Date object directly
+        }));
+            setLocalError('');
+    };
+        // --- End Specific Handler ---
 
      const handleTypeChange = (e) => {
          const newType = e.target.value;
@@ -96,6 +139,11 @@ function TransactionForm({
      };
 
     // Handle form submission
+    // const handleSubmit = (e) => {
+    //     e.preventDefault();
+    //     setLocalError('');
+
+    // --- Update Submit Handler ---
     const handleSubmit = (e) => {
         e.preventDefault();
         setLocalError('');
@@ -114,21 +162,38 @@ function TransactionForm({
             setLocalError('Please select a category.');
             return;
         }
-        if (!formData.transaction_date) {
-            setLocalError('Please select a date.');
+        // if (!formData.transaction_date) {
+        //     setLocalError('Please select a date.');
+        //     return;
+        if (!formData.transaction_date || !isValidDate(formData.transaction_date)) { // Check if date object is valid
+            setLocalError('Please select a valid date.');
             return;
         }
 
-        // Prepare data for API
+    //     // Prepare data for API
+    //     const dataToSubmit = {
+    //         ...formData,
+    //         amount: amountValue, // Send as number
+    //         account_id: parseInt(formData.account_id, 10), // Ensure IDs are numbers if needed by backend
+    //         category_id: parseInt(formData.category_id, 10),
+    //     };
+
+    //     onSubmit(dataToSubmit); // Pass validated data to parent
+
+            // Prepare data for API
         const dataToSubmit = {
-            ...formData,
-            amount: amountValue, // Send as number
-            account_id: parseInt(formData.account_id, 10), // Ensure IDs are numbers if needed by backend
+            type: formData.type,
+            amount: amountValue,
             category_id: parseInt(formData.category_id, 10),
+            description: formData.description || null,
+            account_id: selectedAccountId, // Set from scope
+            // --- Convert Date object back to YYYY-MM-DD string for API ---
+            transaction_date: formatDateFns(formData.transaction_date, 'yyyy-MM-dd'),
         };
 
         onSubmit(dataToSubmit); // Pass validated data to parent
     };
+    // --- End Update Submit Handler ---
 
     return (
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -172,13 +237,39 @@ function TransactionForm({
                 <input type="number" name="amount" id="amount" required value={formData.amount} onChange={handleChange} className="mt-1 input-field" placeholder="0.00" step="0.01" min="0.01"/>
             </div>
 
-            {/* Date */}
+            {/* Date
             <div>
                 <label htmlFor="transaction_date" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Date</label>
                 <input type="date" name="transaction_date" id="transaction_date" required value={formData.transaction_date} onChange={handleChange} className="mt-1 input-field"/>
-            </div>
+            </div> */}
 
-            {/* Account */}
+            {/* --- Date Input with Popper Props --- */}
+            <div>
+                <label htmlFor="transaction_date" className="form-label">Date</label>
+                <DatePicker
+                    id="transaction_date"
+                    selected={formData.transaction_date}
+                    onChange={handleDateChange}
+                    dateFormat="dd-MMM-yyyy"
+                    className="input-field w-full"
+                    required
+                    wrapperClassName="w-full"
+                    showMonthDropdown
+                    showYearDropdown
+                    dropdownMode="select"
+                    // --- REMOVE fixed strategy ---
+                    // popperProps={{
+                    //     strategy: 'fixed',
+                    // }}
+                    // --- KEEP z-index ---
+                    popperClassName="z-50" // <<< Use a high z-index (e.g., 50) for portal
+                    // --- ADD Portal Container ---
+                    popperContainer={({ children }) => createPortal(children, document.body)}
+                />
+            </div>
+            {/* --- End Date Input --- */}
+
+            {/* Account Display */}
             <div>
                 <label htmlFor="account_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Account</label>
                 <select name="account_id" id="account_id" required value={formData.account_id} onChange={handleChange} className="mt-1 input-field appearance-none" disabled={accounts.length === 0}>
@@ -192,7 +283,7 @@ function TransactionForm({
                 </select>
             </div>
 
-            {/* Category */}
+            {/* Category Dropdown */}
              <div>
                  <label htmlFor="category_id" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Category</label>
                 <select name="category_id" id="category_id" required value={formData.category_id} onChange={handleChange} className="mt-1 input-field appearance-none" disabled={filteredCategories.length === 0}>
@@ -206,7 +297,7 @@ function TransactionForm({
                  </select>
              </div>
 
-             {/* Description */}
+             {/* Description Text area */}
             <div>
                  <label htmlFor="description" className="block text-sm font-medium text-gray-700 dark:text-gray-300">Description (Optional)</label>
                  <textarea name="description" id="description" value={formData.description} onChange={handleChange} rows={2} className="mt-1 input-field" placeholder="e.g., Weekly grocery shopping"/>

@@ -23,6 +23,85 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; /* Example system font stack */
 }
 
+/* --- Add React DatePicker Overrides --- */
+/* Make input match input-field focus */
+.react-datepicker-wrapper input[type="text"].input-field:focus {
+  @apply ring-primary border-primary z-10; /* Use your focus ring/border colors */
+}
+/* Or apply input-field directly if not using wrapperClassName prop */
+.react-datepicker__input-container input.input-field {
+   /* Inherits from .input-field */
+}
+
+
+/* Calendar popup styling */
+.react-datepicker {
+  @apply border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-md shadow-lg text-sm;
+  font-family: inherit; /* Use app's font */
+}
+.react-datepicker__header {
+  @apply bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-b border-gray-200 dark:border-gray-600 rounded-t-md pt-2 pb-1;
+}
+.react-datepicker__current-month,
+.react-datepicker__day-name {
+  @apply text-gray-700 dark:text-gray-200 font-medium;
+}
+.react-datepicker__navigation {
+  /* Tailwind doesn't have great triangle support, use background or SVG */
+   @apply top-3;
+}
+.react-datepicker__navigation--previous {
+  /* Style previous arrow */
+}
+.react-datepicker__navigation--next {
+   /* Style next arrow */
+}
+.react-datepicker__day {
+  @apply text-gray-700 dark:text-gray-300 rounded-full hover:bg-primary-light dark:hover:bg-primary-dark hover:text-white dark:hover:text-white;
+  line-height: 1.75rem; /* Adjust based on size */
+  width: 1.75rem;
+   margin: 0.15rem;
+}
+.react-datepicker__day--selected,
+.react-datepicker__day--keyboard-selected {
+   @apply bg-primary dark:bg-primary-light text-white dark:text-primary-dark font-semibold;
+}
+.react-datepicker__day--outside-month {
+  @apply text-gray-400 dark:text-gray-500;
+}
+.react-datepicker__day--disabled {
+  @apply text-gray-300 dark:text-gray-600 cursor-not-allowed opacity-50;
+}
+
+/* Month/Year Dropdown Styling */
+.react-datepicker__year-dropdown,
+.react-datepicker__month-dropdown {
+   @apply bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded shadow-lg max-h-60 overflow-y-auto;
+}
+.react-datepicker__year-option,
+.react-datepicker__month-option {
+  @apply px-3 py-1 text-sm text-gray-700 dark:text-gray-300 hover:bg-primary-light dark:hover:bg-primary-dark hover:text-white dark:hover:text-white cursor-pointer;
+}
+.react-datepicker__year-option--selected_year,
+.react-datepicker__month-option--selected_month {
+   @apply bg-primary dark:bg-primary-light text-white dark:text-primary-dark font-semibold;
+}
+
+
+/* Optional: Increase size slightly */
+/* .react-datepicker-popper {
+  font-size: 0.9rem;
+}
+.react-datepicker__day {
+   line-height: 2rem;
+   width: 2rem;
+   margin: 0.2rem;
+} */
+
+/* --- End React DatePicker Overrides --- */
+
+
+
 @layer components {
   .form-label { @apply block text-sm font-medium text-gray-700 dark:text-gray-300; }
   .form-actions { @apply flex justify-end space-x-3 pt-4; }
